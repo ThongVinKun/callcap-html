@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CallCap</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --blue: #0A84FF;
+      --orange: #FFA500;
+      --light: #f9f9f9;
+      --gray: #ccc;
+      --dark: #111;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--light);
+    }
+    .app {
+      max-width: 430px;
+      margin: auto;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .screen {
+      flex: 1;
+      display: none;
+      padding: 16px;
+      overflow-y: auto;
+      background: white;
+    }
+    .screen.active {
+      display: block;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .caller-video {
+      width: 100%;
+      height: 200px;
+      display: block;
+    }
+    .caller-avatar {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 90px;
+      height: 120px;
+      border: 3px solid white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      background: #000;
+    }
+    .caller-avatar video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-overlay {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .subtitles {
+      background: #f0f0f0;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      max-height: 220px;
+      overflow-y: auto;
+      position: relative;
+    }
+    .circle-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: none;
+      font-size: 20px;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transition: transform 0.1s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .circle-btn:hover {
+      transform: scale(1.1);
+    }
+    .orange { background-color: var(--orange); }
+    .blue { background-color: var(--blue); }
+    .red { background-color: #ff3b30; }
+    .tabbar {
+      display: flex;
+      border-top: 1px solid var(--gray);
+      background: white;
+    }
+    .tabbar button {
+      flex: 1;
+      padding: 10px;
+      font-weight: 600;
+      border: none;
+      background: none;
+    }
+    .tabbar button.active {
+      background: var(--light);
+      color: var(--blue);
+    }
+  </style>
+</head>
+<body style="background: black; display: flex; justify-content: center; align-items: center; height: 100vh;">
+  <div style="background: url('image.png') center/contain no-repeat; width: 430px; height: 932px; position: relative;">
+    <div style="position: absolute; top: 120px; left: 22px; right: 22px; bottom: 5px; overflow: hidden;">
+  <div class="app">
+        <div id="callScreen" class="screen active">
+      <h1 style="margin: 0; font-size: 1.9rem; font-weight: 800;"><span style="color: #FFA500;">Call</span><span style="color: #0A84FF;">Cap</span></h1>
+      <p style="margin: 4px 0 12px; font-size: 1.1rem; font-weight: 600; color: #000;">Khởi chạy với <span style="color: #0A84FF; font-weight: bold;">Zoom</span></p>
+      <div class="video-container">
+        <iframe class="caller-video" src="https://www.youtube.com/embed/3WrZMzqpFTc?autoplay=1&mute=1"></iframe>
+        <div class="caller-avatar">
+          <video id="video" autoplay muted playsinline></video>
+          <div id="cameraOverlay" class="camera-overlay" style="text-align: center;">Camera Paused</div>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 20px; margin: 15px 0;">
+        <button class="circle-btn orange" id="toggleMic" title="Mute"><i id="micIcon" class="fas fa-microphone-slash"></i></button>
+        <button class="circle-btn blue" id="toggleCamera" title="Camera"><i id="cameraIcon" class="fas fa-video"></i></button>
+        <button class="circle-btn red" title="End Call"><i class="fas fa-phone"></i></button>
+      </div>
+      <div class="subtitles" id="subtitlesBox" style="margin-bottom: 80px;"></div>
+    </div>
+
+    <div class="tabbar" style="position: absolute; bottom: 70px; left: 22px; right: 22px; height: 60px; display: flex; align-items: center; justify-content: space-around; border-top: 1px solid var(--gray); background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 0 12px rgba(0, 0, 0, 0.12); border: 1px solid #ddd; z-index: 3;">
+      <button class="active" onclick="switchTab('callScreen')">
+        <i class="fas fa-video"></i><br>Call
+      </button>
+      <button onclick="switchTab('recentScreen')">
+        <i class="fas fa-clock"></i><br>Recent
+      </button>
+      <button onclick="switchTab('settingsScreen')">
+        <i class="fas fa-cog"></i><br>Settings
+      </button>
+      <button onclick="switchTab('loginScreen')">
+        <i class="fas fa-user"></i><br>Login
+      </button>
+    </div>
+
+    <div id="recentScreen" class="screen">
+  <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; color: #0A84FF; text-align: center;">Recent Conversations</h2>
+  <input type="text" id="searchInput" placeholder="Tìm kiếm cuộc gọi..." style="width: 100%; max-width: 100%; padding: 8px 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.9rem; box-sizing: border-box;">
+  <div id="historyList" style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="background: #f9f9f9; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <strong>15/12/2024 - 10:00 AM</strong><br>
+      Platform: <span style="color: #0088cc">Zalo</span><br>
+      <button onclick="downloadTranscript()" style="margin-top: 8px; background: #0A84FF; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">Save Transcript</button>
+    </div>
+    <div style="background: #f9f9f9; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <strong>01/01/2025 - 08:30 AM</strong><br>
+      Platform: <span style="color: #34A853">Google Meet</span><br>
+      <button onclick="downloadTranscript()" style="margin-top: 8px; background: #0A84FF; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">Save Transcript</button>
+    </div>
+    <div style="background: #f9f9f9; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <strong>11/02/2025 - 21:15 PM</strong><br>
+      Phatform: <span style="color: #0A84FF">Zoom</span><br>
+      <button onclick="downloadTranscript()" style="margin-top: 8px; background: #0A84FF; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">Save Transcript</button>
+    </div>
+    <div style="background: #f9f9f9; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <strong>09/06/2024 - 17:00 PM</strong><br>
+      Platform: <span style="color: #c975e1">Micosoft Teams</span><br>
+      <button onclick="downloadTranscript()" style="margin-top: 8px; background: #0A84FF; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">Save Transcript</button>
+    </div>
+  </div>
+</div>
+
+<div id="settingsScreen" class="screen" style="padding: 24px; overflow-y: auto;">
+  <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; color: #0A84FF; text-align: center;">Settings</h2>
+
+  <div style="margin-bottom: 20px;">
+    <label for="language" style="font-weight: 600; display: block; margin-bottom: 6px;">Language</label>
+<select id="language" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; font-size: 1rem;">
+  <option>Auto Detect</option>
+  <option>English</option>
+  <option>Vietnamese</option>
+  <option>Japanese</option>
+  <option>Korean</option>
+  <option>Chinese</option>
+  <option>Spanish</option>
+  <option>French</option>
+  <option>German</option>
+  <option>Italian</option>
+  <option>Portuguese</option>
+  <option>Russian</option>
+  <option>Arabic</option>
+  <option>Hindi</option>
+</select>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+  <label for="subtitleLang" style="font-weight: 600; display: block; margin-bottom: 6px;">Subtitle Language</label>
+  <select id="subtitleLang" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; font-size: 1rem;">
+    <option>English</option>
+    <option>Vietnamese</option>
+    <option>Japanese</option>
+  </select>
+</div>
+
+<div style="margin-bottom: 20px;">
+  <label style="font-weight: 600; display: block; margin-bottom: 6px;">Caption Speed</label>
+  <div style="display: flex; gap: 12px;">
+    <button class="caption-speed" data-speed="slow" style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ccc; background: white; font-weight: 500;">Slow</button>
+    <button class="caption-speed" data-speed="normal" style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ccc; background: white; font-weight: 500;">Normal</button>
+    <button class="caption-speed" data-speed="fast" style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ccc; background: white; font-weight: 500;">Fast</button>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.caption-speed').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.caption-speed').forEach(b => b.style.background = 'white');
+      btn.style.background = '#D6E5FF'; // highlight active button
+      console.log('Caption speed set to:', btn.dataset.speed);
+      // You can store or act on btn.dataset.speed here
+    });
+  });
+</script>
+
+  <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+    <label for="bilingual" style="font-weight: 600;">Bilingual Subtitles</label>
+    <input type="checkbox" id="bilingual" checked style="transform: scale(1.4);">
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <label for="fontSize" style="font-weight: 600; display: block; margin-bottom: 6px;">Font Size</label>
+    <select id="fontSize" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; font-size: 1rem;">
+      <option>Small</option>
+      <option selected>Medium</option>
+      <option>Large</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+  <label for="fontColor" style="font-weight: 600; display: block; margin-bottom: 6px;">Font Color</label>
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <input type="color" id="fontColor" value="#000000" style="flex: none; width: 48px; height: 44px; border-radius: 10px; border: 1px solid #ddd;">
+    <span id="fontColorCode" style="font-size: 0.95rem; color: #333;">#000000</span>
+  </div>
+</div>
+<script>
+  const colorInput = document.getElementById('fontColor');
+  const colorCode = document.getElementById('fontColorCode');
+  colorInput.addEventListener('input', () => {
+    colorCode.textContent = colorInput.value;
+  });
+</script>
+
+  <div style="margin-bottom: 20px;">
+    <label for="position" style="font-weight: 600; display: block; margin-bottom: 6px;">Subtitle Position</label>
+    <select id="position" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; font-size: 1rem;">
+      <option value="bottom">Bottom</option>
+      <option value="top">Top</option>
+    </select>
+  </div>
+
+  <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+  
+</div>
+
+  <div id="loginScreen" class="screen">
+  <h1 style="margin: 0; font-size: 1.9rem; font-weight: 800;"><span style="color: #FFA500;">Call</span><span style="color: #0A84FF;">Cap</span></h1>
+  <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; color: #0A84FF; text-align: center;">Login</h2>
+  <form style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+      <label for="email" style="display: block; font-weight: 600; margin-bottom: 6px;">Email</label>
+      <input type="email" id="email" placeholder="you@example.com" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+    </div>
+    <div>
+      <label for="password" style="display: block; font-weight: 600; margin-bottom: 6px;">Password</label>
+      <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+    </div>
+    <button type="submit" style="padding: 12px; font-size: 1rem; background-color: #0A84FF; color: white; border: none; border-radius: 10px; cursor: pointer;">Sign In</button>
+    <div style="text-align: center; font-size: 0.9rem; color: #555;">or sign in with</div>
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <button style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-weight: 500;"><i class="fab fa-google" style="margin-right: 6px;"></i>Google</button>
+      <button style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-weight: 500;"><i class="fab fa-facebook" style="margin-right: 6px;"></i>Facebook</button>
+    </div>
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <button style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-weight: 500;"><i class="fab fa-microsoft" style="margin-right: 6px;"></i>Microsoft</button>
+      <button style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-weight: 500;"><i class="fas fa-comment" style="margin-right: 6px;"></i>Zalo</button>
+    </div>
+    <p style="text-align: center; font-size: 0.9rem; color: #555;">Don't have an account? <a href="#" style="color: #0A84FF; text-decoration: none; font-weight: 500;">Sign up</a></p>
+    <p style="text-align: center; font-size: 0.75rem; color: #888;">By continuing, you agree to our <a href="#" style="color: #0A84FF; text-decoration: none;">Terms of Service</a> and <a href="#" style="color: #0A84FF; text-decoration: none;">Privacy Policy</a>. © 2024 EasyEar Inc.</p>
+  </form>
+
+  </div>
+
+  <script>
+    const screens = document.querySelectorAll('.screen');
+    const tabs = document.querySelectorAll('.tabbar button');
+
+    function switchTab(id) {
+      screens.forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      tabs.forEach(t => t.classList.remove('active'));
+      [...tabs].find(btn => btn.textContent.toLowerCase().includes(id.replace('Screen','').toLowerCase())).classList.add('active');
+    }
+
+    let localStream = null;
+    const videoElement = document.getElementById('video');
+    const overlay = document.getElementById('cameraOverlay');
+    const toggleCameraBtn = document.getElementById('toggleCamera');
+    const toggleMicBtn = document.getElementById('toggleMic');
+    const micIcon = document.getElementById('micIcon');
+    const subtitleBox = document.getElementById('subtitlesBox');
+
+    async function startCamera() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        videoElement.srcObject = localStream;
+      } catch (err) {
+        console.warn('Cannot access camera or microphone:', err);
+      }
+    }
+    startCamera();
+
+    toggleCameraBtn.addEventListener('click', () => {
+      const icon = document.getElementById('cameraIcon');
+      const videoTrack = localStream?.getVideoTracks()[0];
+      if (videoTrack) {
+        const isEnabled = videoTrack.enabled;
+        videoTrack.enabled = !isEnabled;
+        overlay.style.display = isEnabled ? 'flex' : 'none';
+        icon.className = isEnabled ? 'fas fa-video-slash' : 'fas fa-video';
+      }
+    });
+
+    toggleMicBtn.addEventListener('click', () => {
+      const audioTrack = localStream?.getAudioTracks()[0];
+      if (audioTrack) {
+        const isEnabled = audioTrack.enabled;
+        audioTrack.enabled = !isEnabled;
+        micIcon.className = isEnabled ? 'fas fa-microphone-slash' : 'fas fa-microphone';
+      }
+    });
+
+    const subtitles = [
+      { speaker: 'Alex', text: 'Hi, how are you?', vi: 'Chào, bạn khỏe không?' },
+      { speaker: 'You', text: "I'm good, how about you?", vi: 'Mình ổn, còn bạn thì sao?' },
+      { speaker: 'Alex', text: 'Great to hear!', vi: 'Nghe vậy thật tuyệt!' },
+      { speaker: 'You', text: 'What have you been up to lately?', vi: 'Dạo này bạn làm gì?' },
+      { speaker: 'Alex', text: 'Just working on some personal projects.', vi: 'Tớ đang làm vài dự án cá nhân.' },
+      { speaker: 'You', text: 'Sounds exciting!', vi: 'Nghe thú vị ghê!' },
+      { speaker: 'Alex', text: 'Yeah, I’ll share more soon.', vi: 'Ừ, tớ sẽ kể thêm sau.' },
+      { speaker: 'You', text: 'Are you still working remotely?', vi: 'Bạn vẫn làm việc từ xa chứ?' },
+      { speaker: 'Alex', text: 'Yes, mostly from home.', vi: 'Ừ, chủ yếu làm ở nhà.' },
+      { speaker: 'You', text: 'Let’s catch up in person sometime!', vi: 'Hẹn gặp nhau trực tiếp một hôm nha!' },
+      { speaker: 'Alex', text: 'Sure! Let’s plan for next weekend.', vi: 'Chắc rồi! Để tớ sắp lịch cuối tuần sau.' }
+    ];
+
+    let currentLine = 0;
+    function showNextSubtitle() {
+      if (currentLine < subtitles.length) {
+        const entry = subtitles[currentLine];
+        const p1 = document.createElement('p');
+        p1.innerHTML = `<strong>${entry.speaker}:</strong> ${entry.text}`;
+        const p2 = document.createElement('p');
+        p2.innerHTML = `<em>Tiếng Việt:</em> ${entry.vi}`;
+        p1.style.opacity = p2.style.opacity = 0;
+        p1.style.transition = p2.style.transition = 'opacity 0.6s ease';
+        subtitleBox.appendChild(p1);
+        subtitleBox.appendChild(p2);
+        requestAnimationFrame(() => {
+          p1.style.opacity = 1;
+          p2.style.opacity = 1;
+        });
+        subtitleBox.scrollTop = subtitleBox.scrollHeight;
+        currentLine++;
+        setTimeout(showNextSubtitle, 2500);
+      }
+    }
+    setTimeout(showNextSubtitle, 1500);
+
+    function downloadTranscript() {
+      if (!subtitleBox) return;
+      const lines = subtitles.slice(0, currentLine).map(entry => `${entry.speaker}: ${entry.text}\nTiếng Việt: ${entry.vi}\n`).join('\n');
+      const blob = new Blob([lines], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cuoc-hoi-thoai.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  document.getElementById('searchInput').addEventListener('input', function (e) {
+  const keyword = e.target.value.toLowerCase();
+  document.querySelectorAll('#historyList > div').forEach(item => {
+    item.style.display = item.innerText.toLowerCase().includes(keyword) ? 'block' : 'none';
+  });
+});
+</script>
+    </div>
+  </div>
+    </div>
+  </div>
+    </div>
+  </div>
+</body>
+</html>
